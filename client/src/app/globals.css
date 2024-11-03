@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* Primary background and foreground */
+        --background: 0 0% 100%;
+        --foreground: 222.2 47.4% 11.2%;
+
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 47.4% 11.2%;
+
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 47.4% 11.2%;
+
+        --border: 214.3 31.8% 91.4%;
+
+        /* Light gray for borders */
+        --input: 214.3 31.8% 91.4%;
+
+        /* Light gray for input borders */
+
+        /* Primary button colors */
+        --primary: 220 60% 20%;
+        /* Dark Blue for primary buttons */
+        --primary-foreground: 0 0% 100%;
+        /* White text on dark blue button */
+
+        /* Secondary button and accent colors */
+        --secondary: 210 100% 96%;
+        /* Light blue for secondary elements */
+        --secondary-foreground: 0 0% 30%;
+        /* Dark gray text on light blue */
+
+        /* Accent colors for hover effects and highlights */
+        --accent: 210 100% 96%;
+        /* Light blue */
+        --accent-foreground: 0 0% 30%;
+        /* Dark gray text on light blue accents */
+
+        /* Destructive actions */
+        --destructive: 0 60% 55%;
+        /* Toned-down red for destructive actions */
+        --destructive-foreground: 0 0% 100%;
+        /* White text on red buttons */
+
+        /* Focus ring */
+        --ring: 210 100% 80%;
+        /* Slightly deeper light blue for focus rings */
+
+        /* Border radius */
+        --radius: 0.5rem;
+        /* Consistent border radius */
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 240 4.8% 95.9%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+
+    .dark {
+        --sidebar-background: 240 5.9% 10%;
+        --sidebar-foreground: 240 4.8% 95.9%;
+        --sidebar-primary: 224.3 76.3% 48%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 240 3.7% 15.9%;
+        --sidebar-accent-foreground: 240 4.8% 95.9%;
+        --sidebar-border: 240 3.7% 15.9%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
