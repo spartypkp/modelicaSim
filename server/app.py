@@ -17,7 +17,9 @@ from flask import send_from_directory
 app = Flask(__name__)
 CORS(app)
 
-UPLOAD_FOLDER = 'client/generated_graphs'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'generated_graphs')
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -31,7 +33,12 @@ def return_home():
 @app.route('/generated_graphs/<path:filename>')
 def serve_image(filename):
     print(f"Serving image: {filename}")
-    return send_from_directory(UPLOAD_FOLDER, filename)
+    print(f"Looking in directory: {UPLOAD_FOLDER}")  # Add this debug line
+    try:
+        return send_from_directory(UPLOAD_FOLDER, filename)
+    except Exception as e:
+        print(f"Error serving file: {str(e)}")  # Add this debug line
+        return str(e), 404
 
 @app.route("/api/datascience", methods=['POST'])
 def do_datascience():
