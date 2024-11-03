@@ -1,1 +1,3 @@
 .venv
+/server/generated_graphs
+generated_graphs

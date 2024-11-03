@@ -1,173 +1,143 @@
 "use client";
 
-import { Upload } from 'lucide-react';
-import { useState } from 'react';
+import { UploadModal } from '@/components/uploadModal';
+import { Plus, Search } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-// TypeScript interfaces
-interface MachineData {
+interface Machine {
 	id: string;
 	name: string;
-	fields: {
-		id: string;
-		name: string;
-		nums: {
-			value: number;
-			createdAt: string;
-		}[];
-	}[];
-}
-
-interface ProcessedData {
-	machineData: string | null;
-	isProcessing: boolean;
-	error: string | null;
-	visualizationPath: string | null; // Add this line
+	lastUpdated: string;
+	status: 'active' | 'inactive' | 'error';
+	accuracy: number | null;
+	file_paths: Record<string, any>;
+	metadata: Record<string, any>;
 }
 
 export default function Home() {
-	// State management
-	const [processedData, setProcessedData] = useState<ProcessedData>({
-		machineData: null,
-		isProcessing: false,
-		error: null,
-		visualizationPath: null
-	});
+	const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+	const [machines, setMachines] = useState<Machine[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
-	const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0];
-		if (!file) return;
-
-		setProcessedData(prev => ({ ...prev, isProcessing: true, error: null }));
-
+	const fetchMachines = async () => {
 		try {
-			// First validate that it's actually JSON
-			const text = await file.text();
-			const jsonData = JSON.parse(text);
-
-			const response = await fetch('http://localhost:8080/api/datascience', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ jsonData }),
-			});
-
-			if (!response.ok) {
-				throw new Error(`API error: ${response.statusText}`);
-			}
-
-			const result = await response.json();
-
-			setProcessedData({
-				machineData: result.machineData,
-				isProcessing: false,
-				error: null,
-				visualizationPath: result.visualizationPath // Assuming this is the path returned from the API
-			});
-		} catch (error) {
-			setProcessedData({
-				machineData: null,
-				isProcessing: false,
-				error: error instanceof Error ? error.message : 'Error processing file. Please ensure it is valid JSON.',
-				visualizationPath: null
-			});
+			const response = await fetch('/api/machines');
+			if (!response.ok) throw new Error('Failed to fetch machines');
+			const data = await response.json();
+			setMachines(data);
+		} catch (err) {
+			setError('Failed to load machines');
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
+	useEffect(() => {
+		fetchMachines();
+	}, []);
+
+	const handleUploadSuccess = () => {
+		fetchMachines();
+	};
+
 	return (
-		<main className="min-h-screen p-8 bg-gray-50">
+		<main className="min-h-screen bg-gray-50">
 			{/* Header */}
-			<div className="mb-8">
-				<h1 className="text-3xl font-bold text-gray-900">Machine Learning Digital Twin Dashboard</h1>
-				<p className="mt-2 text-gray-600">Upload machine data to generate Modelica simulations</p>
-			</div>
-
-			{/* Main content area */}
-			<div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-				{/* Left panel - Data Upload and Visualization */}
-				<div className="space-y-6">
-					{/* File upload section */}
-					<div className="p-6 bg-white rounded-lg shadow">
-						<h2 className="mb-4 text-xl font-semibold text-gray-900">Data Upload</h2>
-
-						{/* Upload button */}
-						<div className="flex items-center justify-center w-full">
-							<label className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-								<div className="flex flex-col items-center justify-center pt-5 pb-6">
-									<Upload className="w-12 h-12 mb-4 text-gray-500" />
-									<p className="mb-2 text-sm text-gray-500">
-										<span className="font-semibold">Click to upload</span> or drag and drop
-									</p>
-									<p className="text-xs text-gray-500">JSON files only</p>
-								</div>
-								<input
-									type="file"
-									className="hidden"
-									accept=".json"
-									onChange={handleFileUpload}
-								/>
-							</label>
-						</div>
-
-						{/* Status messages */}
-						{processedData.isProcessing && (
-							<p className="mt-4 text-sm text-blue-600">Processing data...</p>
-						)}
-						{processedData.error && (
-							<p className="mt-4 text-sm text-red-600">{processedData.error}</p>
-						)}
+			<div className="bg-white shadow">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="flex justify-between h-16 items-center">
+						<h1 className="text-2xl font-bold text-gray-900">Digital Twin Dashboard</h1>
+						<button
+							onClick={() => setIsUploadModalOpen(true)}
+							className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+						>
+							<Plus className="h-5 w-5 mr-2" />
+							New Machine
+						</button>
 					</div>
-
-					{/* Data visualization section */}
-					{processedData.machineData && (
-						<div className="p-6 bg-white rounded-lg shadow">
-							<h2 className="mb-4 text-xl font-semibold text-gray-900">Data Visualization</h2>
-							{processedData.visualizationPath ? (
-								<div className="w-full h-64 overflow-hidden rounded-lg">
-									<img
-										src={`http://localhost:8080/${processedData.visualizationPath}`}
-										alt="Data Visualization"
-										className="w-full h-full object-contain"
-									/>
-								</div>
-							) : (
-								<div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-									<p className="text-gray-600">Processing visualization...</p>
-								</div>
-							)}
-						</div>
-					)}
-				</div>
-
-				{/* Right panel - Model Generation and Status */}
-				<div className="space-y-6">
-					{processedData.machineData && (
-						<>
-							{/* Model status section */}
-							<div className="p-6 bg-white rounded-lg shadow">
-								<h2 className="mb-4 text-xl font-semibold text-gray-900">Modelica Generation Status</h2>
-								<div className="space-y-4">
-									<p>{processedData.machineData}</p>
-								</div>
-							</div>
-
-							{/* Model controls section */}
-							<div className="p-6 bg-white rounded-lg shadow">
-								<h2 className="mb-4 text-xl font-semibold text-gray-900">Model Controls</h2>
-								<button
-									className="w-full px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-									onClick={() => {/* Will add generation logic */ }}
-								>
-									Generate Modelica Model
-								</button>
-							</div>
-						</>
-					)}
 				</div>
 			</div>
+
+			{/* Main content */}
+			<div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+				{/* Search and filter */}
+				<div className="mb-6">
+					<div className="relative">
+						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+						<input
+							type="text"
+							placeholder="Search machines..."
+							className="pl-10 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+						/>
+					</div>
+				</div>
+
+				{/* Loading state */}
+				{isLoading && (
+					<div className="text-center py-12">
+						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+					</div>
+				)}
+
+				{/* Error state */}
+				{error && (
+					<div className="text-center py-12">
+						<p className="text-red-600">{error}</p>
+					</div>
+				)}
+
+				{/* Machines grid */}
+				{!isLoading && !error && (
+					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+						{machines.map((machine) => (
+							<Link
+								key={machine.id}
+								href={`/machine/${machine.id}`}
+								className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+							>
+								<div className="p-6">
+									<div className="flex justify-between items-start">
+										<div>
+											<h3 className="text-lg font-semibold text-gray-900">{machine.name}</h3>
+											<p className="mt-1 text-sm text-gray-500">
+												Last updated: {new Date(machine.lastUpdated).toLocaleDateString()}
+											</p>
+										</div>
+										<span className={`px-2 py-1 text-xs rounded-full ${machine.status === 'active' ? 'bg-green-100 text-green-800' :
+												machine.status === 'error' ? 'bg-red-100 text-red-800' :
+													'bg-gray-100 text-gray-800'
+											}`}>
+											{machine.status}
+										</span>
+									</div>
+									<div className="mt-4 grid grid-cols-2 gap-4">
+										<div>
+											<p className="text-sm text-gray-500">Model Accuracy</p>
+											<p className="text-lg font-semibold text-gray-900">
+												{machine.accuracy ? `${machine.accuracy}%` : 'N/A'}
+											</p>
+										</div>
+										<div>
+											<p className="text-sm text-gray-500">Fields</p>
+											<p className="text-lg font-semibold text-gray-900">
+												{machine.metadata?.fields?.length || 0}
+											</p>
+										</div>
+									</div>
+								</div>
+							</Link>
+						))}
+					</div>
+				)}
+			</div>
+
+			<UploadModal
+				isOpen={isUploadModalOpen}
+				onClose={() => setIsUploadModalOpen(false)}
+				onSuccess={handleUploadSuccess}
+			/>
 		</main>
 	);
 }
-
-
-
