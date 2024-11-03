@@ -1,18 +1,44 @@
 "use client";
 
 import { UploadModal } from '@/components/uploadModal';
-import { Plus, Search } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 interface Machine {
 	id: string;
 	name: string;
-	lastUpdated: string;
+	description: string | null;
 	status: 'active' | 'inactive' | 'error';
 	accuracy: number | null;
-	file_paths: Record<string, any>;
-	metadata: Record<string, any>;
+	created_at: string;
+	updated_at: string;
+	last_data_update: string | null;
+	last_model_generation: string | null;
+	file_paths: {
+		rawData: {
+			fileName: string;
+			uploadedAt: string;
+			size: number;
+		};
+		visualizations: Array<{
+			path: string;
+			type: string;
+			generatedAt: string;
+		}>;
+		modelicaFiles: Array<{
+			path: string;
+			version: string;
+			generatedAt: string;
+			accuracy: number;
+		}>;
+	};
+	metadata: {
+		originalFileName: string;
+		uploadTimestamp: string;
+		dataPoints: number;
+		fields: string[];
+	};
 }
 
 export default function Home() {
@@ -20,6 +46,7 @@ export default function Home() {
 	const [machines, setMachines] = useState<Machine[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [searchTerm, setSearchTerm] = useState('');
 
 	const fetchMachines = async () => {
 		try {
@@ -31,6 +58,7 @@ export default function Home() {
 			setError('Failed to load machines');
 		} finally {
 			setIsLoading(false);
+
 		}
 	};
 
@@ -38,9 +66,34 @@ export default function Home() {
 		fetchMachines();
 	}, []);
 
-	const handleUploadSuccess = () => {
-		fetchMachines();
+	const getStatusIcon = (status: Machine['status']) => {
+		switch (status) {
+			case 'active':
+				return <CheckCircle className="h-5 w-5 text-green-600" />;
+			case 'error':
+				return <AlertCircle className="h-5 w-5 text-red-600" />;
+			default:
+				return <Clock className="h-5 w-5 text-gray-600" />;
+		}
 	};
+
+	const getLatestModelInfo = (machine: Machine) => {
+		if (!machine.file_paths.modelicaFiles.length) return null;
+		return machine.file_paths.modelicaFiles[machine.file_paths.modelicaFiles.length - 1];
+	};
+
+	const getTimeSince = (date: string) => {
+		const diff = new Date().getTime() - new Date(date).getTime();
+		const hours = Math.floor(diff / (1000 * 60 * 60));
+		if (hours < 24) return `${hours}h ago`;
+		const days = Math.floor(hours / 24);
+		return `${days}d ago`;
+	};
+
+	const filteredMachines = machines.filter(machine =>
+		machine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+		machine.description?.toLowerCase().includes(searchTerm.toLowerCase())
+	);
 
 	return (
 		<main className="min-h-screen bg-gray-50">
@@ -69,19 +122,20 @@ export default function Home() {
 						<input
 							type="text"
 							placeholder="Search machines..."
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
 							className="pl-10 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
 						/>
 					</div>
 				</div>
 
-				{/* Loading state */}
+				{/* Loading and Error states remain the same */}
 				{isLoading && (
 					<div className="text-center py-12">
 						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
 					</div>
 				)}
 
-				{/* Error state */}
 				{error && (
 					<div className="text-center py-12">
 						<p className="text-red-600">{error}</p>
@@ -90,45 +144,69 @@ export default function Home() {
 
 				{/* Machines grid */}
 				{!isLoading && !error && (
-					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-						{machines.map((machine) => (
-							<Link
-								key={machine.id}
-								href={`/machine/${machine.id}`}
-								className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-							>
-								<div className="p-6">
-									<div className="flex justify-between items-start">
-										<div>
-											<h3 className="text-lg font-semibold text-gray-900">{machine.name}</h3>
-											<p className="mt-1 text-sm text-gray-500">
-												Last updated: {new Date(machine.lastUpdated).toLocaleDateString()}
-											</p>
+					<div className="flex flex-col gap-6">
+						{filteredMachines.map((machine) => {
+							const latestModel = getLatestModelInfo(machine);
+							return (
+								<Link
+									key={machine.id}
+									href={`/machine/${machine.id}`}
+									className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+								>
+									<div className="p-6">
+										<div className="flex justify-between items-start">
+											<div className="flex items-start gap-4">
+												<div className="mt-1">
+													{getStatusIcon(machine.status)}
+												</div>
+												<div>
+													<h3 className="text-lg font-semibold text-gray-900">{machine.name}</h3>
+													{machine.description && (
+														<p className="text-sm text-gray-600 mt-1">{machine.description}</p>
+													)}
+													<p className="text-sm text-gray-500 mt-2">
+														Created {getTimeSince(machine.created_at)}
+													</p>
+												</div>
+											</div>
+											<div className="text-right">
+												<p className="text-sm text-gray-500">Last updated</p>
+												<p className="text-sm font-medium text-gray-900">
+													{getTimeSince(machine.updated_at)}
+												</p>
+											</div>
 										</div>
-										<span className={`px-2 py-1 text-xs rounded-full ${machine.status === 'active' ? 'bg-green-100 text-green-800' :
-												machine.status === 'error' ? 'bg-red-100 text-red-800' :
-													'bg-gray-100 text-gray-800'
-											}`}>
-											{machine.status}
-										</span>
+
+										<div className="mt-6 grid grid-cols-4 gap-4">
+											<div>
+												<p className="text-sm text-gray-500">Latest Model</p>
+												<p className="text-lg font-semibold text-gray-900">
+													{latestModel ? `v${latestModel.version}` : 'None'}
+												</p>
+											</div>
+											<div>
+												<p className="text-sm text-gray-500">Accuracy</p>
+												<p className="text-lg font-semibold text-gray-900">
+													{latestModel ? `${latestModel.accuracy.toFixed(1)}%` : 'N/A'}
+												</p>
+											</div>
+											<div>
+												<p className="text-sm text-gray-500">Data Points</p>
+												<p className="text-lg font-semibold text-gray-900">
+													{machine.metadata.dataPoints.toLocaleString()}
+												</p>
+											</div>
+											<div>
+												<p className="text-sm text-gray-500">Fields</p>
+												<p className="text-lg font-semibold text-gray-900">
+													{machine.metadata.fields.length}
+												</p>
+											</div>
+										</div>
 									</div>
-									<div className="mt-4 grid grid-cols-2 gap-4">
-										<div>
-											<p className="text-sm text-gray-500">Model Accuracy</p>
-											<p className="text-lg font-semibold text-gray-900">
-												{machine.accuracy ? `${machine.accuracy}%` : 'N/A'}
-											</p>
-										</div>
-										<div>
-											<p className="text-sm text-gray-500">Fields</p>
-											<p className="text-lg font-semibold text-gray-900">
-												{machine.metadata?.fields?.length || 0}
-											</p>
-										</div>
-									</div>
-								</div>
-							</Link>
-						))}
+								</Link>
+							);
+						})}
 					</div>
 				)}
 			</div>
@@ -136,7 +214,7 @@ export default function Home() {
 			<UploadModal
 				isOpen={isUploadModalOpen}
 				onClose={() => setIsUploadModalOpen(false)}
-				onSuccess={handleUploadSuccess}
+				onSuccess={fetchMachines}
 			/>
 		</main>
 	);

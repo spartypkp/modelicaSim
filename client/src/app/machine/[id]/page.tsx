@@ -1,9 +1,9 @@
 "use client";
 
+import { ModelIteration, ModelIterations } from '@/components/modelIterations';
 import { ArrowLeft, RefreshCw, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-
 interface MachineData {
 	id: string;
 	name: string;
@@ -45,6 +45,39 @@ export default function MachineDashboard({ params }: { params: { id: string; }; 
 	const [machineData, setMachineData] = useState<MachineData | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [iterations, setIterations] = useState<ModelIteration[]>([]);
+	const [isGenerating, setIsGenerating] = useState(false);
+	const [currentIteration, setCurrentIteration] = useState(0);
+	const MAX_ITERATIONS = 5;
+
+	const handleStartGeneration = async () => {
+		setIsGenerating(true);
+		try {
+			// Start model generation process
+			const response = await fetch(`/api/machines/${params.id}/generate`, {
+				method: 'POST',
+			});
+
+			if (!response.ok) throw new Error('Failed to start model generation');
+
+			// Poll for updates or use WebSocket for real-time updates
+			// Add new iterations as they come in
+			setIterations(prev => [...prev, {
+				version: `1.${currentIteration}`,
+				status: 'running',
+				accuracy: null,
+				visualizationPath: null,
+				modelicaCode: null,
+				timestamp: new Date().toISOString()
+			}]);
+			setCurrentIteration(prev => prev + 1);
+
+		} catch (error) {
+			console.error('Error starting generation:', error);
+		} finally {
+			setIsGenerating(false);
+		}
+	};
 
 	const fetchMachineData = async () => {
 		setIsLoading(true);
@@ -142,100 +175,100 @@ export default function MachineDashboard({ params }: { params: { id: string; }; 
 						<p className="text-red-600">{error}</p>
 					</div>
 				) : machineData && (
-					<div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-						{/* Left panel - Visualization */}
-						<div className="space-y-6">
-							<div className="bg-white rounded-lg shadow">
-								<div className="p-6">
-									<div className="flex justify-between items-center mb-4">
-										<h2 className="text-xl font-semibold text-gray-900">Real-Time Data</h2>
-										<span className="text-sm text-gray-500">
-											{machineData.metadata.dataPoints} data points
-										</span>
-									</div>
-									{machineData.file_paths.visualizations[0]?.path ? (
-										<div className="mt-4 w-full h-96 overflow-hidden rounded-lg">
-											<img
-												src={`http://localhost:8080/${machineData.file_paths.visualizations[0].path}`}
-												alt="Data Visualization"
-												className="w-full h-full object-contain"
-											/>
-										</div>
-									) : (
-										<div className="mt-4 flex items-center justify-center h-96 bg-gray-100 rounded-lg">
-											<p className="text-gray-600">No visualization available</p>
-										</div>
-									)}
+					<div className="space-y-6">
+						{/* Machine Overview Section */}
+						<div className="bg-white rounded-lg shadow p-6">
+							<div className="grid grid-cols-4 gap-4">
+								<div className="p-4 bg-gray-50 rounded">
+									<h3 className="text-sm font-medium text-gray-500">Status</h3>
+									<p className="mt-1 text-sm text-gray-900">{machineData.status}</p>
 								</div>
-							</div>
-
-							{/* Fields Overview */}
-							<div className="bg-white rounded-lg shadow">
-								<div className="p-6">
-									<h2 className="text-xl font-semibold text-gray-900 mb-4">Data Fields</h2>
-									<div className="grid grid-cols-2 gap-4">
-										{machineData.metadata.fields.map((field, index) => (
-											<div key={index} className="p-3 bg-gray-50 rounded">
-												<p className="text-sm text-gray-900">{field}</p>
-											</div>
-										))}
-									</div>
+								<div className="p-4 bg-gray-50 rounded">
+									<h3 className="text-sm font-medium text-gray-500">Last Updated</h3>
+									<p className="mt-1 text-sm text-gray-900">{getTimeSinceUpdate()}</p>
+								</div>
+								<div className="p-4 bg-gray-50 rounded">
+									<h3 className="text-sm font-medium text-gray-500">Data Points</h3>
+									<p className="mt-1 text-sm text-gray-900">{machineData.metadata.dataPoints}</p>
+								</div>
+								<div className="p-4 bg-gray-50 rounded">
+									<h3 className="text-sm font-medium text-gray-500">Fields</h3>
+									<p className="mt-1 text-sm text-gray-900">{machineData.metadata.fields.length}</p>
 								</div>
 							</div>
 						</div>
 
-						{/* Right panel - Model Status and Controls */}
-						<div className="space-y-6">
-							{/* Model status section */}
-							<div className="bg-white rounded-lg shadow">
-								<div className="p-6">
-									<h2 className="text-xl font-semibold text-gray-900">Modelica Model Status</h2>
-									<div className="mt-6 space-y-4">
+						{/* Main Content Grid */}
+						<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+							{/* Left Column: Original Data */}
+							<div className="space-y-6">
+								<div className="bg-white rounded-lg shadow">
+									<div className="p-6">
+										<h2 className="text-xl font-semibold text-gray-900 mb-4">Original Data</h2>
+										{machineData.file_paths.visualizations[0]?.path ? (
+											<div className="w-full h-96 overflow-hidden rounded-lg">
+												<img
+													src={`http://localhost:8080/${machineData.file_paths.visualizations[0].path}`}
+													alt="Original Data Visualization"
+													className="w-full h-full object-contain"
+												/>
+											</div>
+										) : (
+											<div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
+												<p className="text-gray-600">No visualization available</p>
+											</div>
+										)}
+									</div>
+								</div>
+
+								<div className="bg-white rounded-lg shadow">
+									<div className="p-6">
+										<h2 className="text-xl font-semibold text-gray-900 mb-4">Data Fields</h2>
 										<div className="grid grid-cols-2 gap-4">
-											<div className="p-4 bg-gray-50 rounded">
-												<h3 className="text-sm font-medium text-gray-500">Status</h3>
-												<p className="mt-1 text-sm text-gray-900">{machineData.status}</p>
-											</div>
-											<div className="p-4 bg-gray-50 rounded">
-												<h3 className="text-sm font-medium text-gray-500">Last Updated</h3>
-												<p className="mt-1 text-sm text-gray-900">{getTimeSinceUpdate()}</p>
-											</div>
-											<div className="p-4 bg-gray-50 rounded">
-												<h3 className="text-sm font-medium text-gray-500">Accuracy</h3>
-												<p className="mt-1 text-sm text-gray-900">
-													{getLatestModelInfo()?.accuracy.toFixed(1)}%
-												</p>
-											</div>
-											<div className="p-4 bg-gray-50 rounded">
-												<h3 className="text-sm font-medium text-gray-500">Model Version</h3>
-												<p className="mt-1 text-sm text-gray-900">
-													{getLatestModelInfo()?.version || 'No model yet'}
-												</p>
-											</div>
+											{machineData.metadata.fields.map((field, index) => (
+												<div key={index} className="p-3 bg-gray-50 rounded">
+													<p className="text-sm text-gray-900">{field}</p>
+												</div>
+											))}
 										</div>
 									</div>
 								</div>
 							</div>
 
-							{/* Model controls */}
-							<div className="bg-white rounded-lg shadow">
-								<div className="p-6">
-									<h2 className="text-xl font-semibold text-gray-900">Model Controls</h2>
-									<div className="mt-6 space-y-4">
-										<button
-											className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-											disabled={machineData.status === 'error'}
-										>
-											Generate New Model
-										</button>
-										<button
-											className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-											disabled={!machineData.file_paths.modelicaFiles.length}
-										>
-											View Model History ({machineData.file_paths.modelicaFiles.length})
-										</button>
+							{/* Right Column: Model Iterations */}
+							<div className="space-y-6">
+								<ModelIterations
+									machineId={params.id}
+									isGenerating={isGenerating}
+									iterations={iterations}
+									currentIteration={currentIteration}
+									maxIterations={MAX_ITERATIONS}
+									onStartGeneration={handleStartGeneration}
+									originalVisualizationPath={machineData.file_paths.visualizations[0]?.path}
+								/>
+
+								{/* Model Generation Success Metrics */}
+								{iterations.length > 0 && (
+									<div className="bg-white rounded-lg shadow">
+										<div className="p-6">
+											<h2 className="text-xl font-semibold text-gray-900 mb-4">Generation Metrics</h2>
+											<div className="grid grid-cols-2 gap-4">
+												<div className="p-4 bg-gray-50 rounded">
+													<h3 className="text-sm font-medium text-gray-500">Best Accuracy</h3>
+													<p className="mt-1 text-lg font-semibold text-gray-900">
+														{Math.max(...iterations.map(i => i.accuracy || 0)).toFixed(2)}%
+													</p>
+												</div>
+												<div className="p-4 bg-gray-50 rounded">
+													<h3 className="text-sm font-medium text-gray-500">Iterations</h3>
+													<p className="mt-1 text-lg font-semibold text-gray-900">
+														{iterations.length} / {MAX_ITERATIONS}
+													</p>
+												</div>
+											</div>
+										</div>
 									</div>
-								</div>
+								)}
 							</div>
 						</div>
 					</div>
@@ -243,4 +276,5 @@ export default function MachineDashboard({ params }: { params: { id: string; }; 
 			</div>
 		</main>
 	);
+
 }

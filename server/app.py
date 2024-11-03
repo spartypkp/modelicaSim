@@ -11,7 +11,7 @@ from dataScience import do_datascience as process_data  # renamed to avoid namin
 import json
 import uuid
 from flask import send_from_directory
-
+from runner import run_modelica_pipeline
 
 # If localhost won't connect: chrome://net-internals/#sockets
 app = Flask(__name__)
@@ -60,6 +60,7 @@ def do_datascience():
         
         # Process the data using existing function
         df_describe, image_file_path = process_data(file_path)
+        run_modelica_pipeline(file_path)
         
         # Clean up - remove temporary file
         
@@ -82,6 +83,8 @@ def do_datascience():
         return jsonify({
             'error': str(e)
         }), 500
+    
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=8080)

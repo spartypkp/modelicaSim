@@ -48,6 +48,9 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 			if (!response.ok) {
 				throw new Error('Upload failed');
 			}
+			const data = await response.json();
+			const machineId = data.id;
+
 
 			onSuccess();
 			onClose();
@@ -55,6 +58,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 			setError('Failed to upload file. Please try again.');
 		} finally {
 			setIsUploading(false);
+
 		}
 	};
 

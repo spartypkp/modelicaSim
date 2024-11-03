@@ -65,6 +65,8 @@ export async function POST(request: Request) {
 			]
 		);
 
+
+
 		return NextResponse.json(result.rows[0]);
 	} catch (error) {
 		console.error('Error creating machine:', error);
