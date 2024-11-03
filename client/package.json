@@ -1,12 +1,11 @@
 {
-  "name": "contoural-citations",
-  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start-flask": "cd ../server && python3 -m flask run --port=8080",
+    "start-next": "next dev --turbo",
+    "start": "npm-run-all --parallel start-next start-flask"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",

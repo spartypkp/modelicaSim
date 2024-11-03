@@ -18,9 +18,10 @@ interface MachineData {
 }
 
 interface ProcessedData {
-	machineData: MachineData | null;
+	machineData: string | null;
 	isProcessing: boolean;
 	error: string | null;
+	visualizationPath: string | null; // Add this line
 }
 
 export default function Home() {
@@ -28,10 +29,10 @@ export default function Home() {
 	const [processedData, setProcessedData] = useState<ProcessedData>({
 		machineData: null,
 		isProcessing: false,
-		error: null
+		error: null,
+		visualizationPath: null
 	});
 
-	// Handle file upload
 	const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		if (!file) return;
@@ -39,18 +40,36 @@ export default function Home() {
 		setProcessedData(prev => ({ ...prev, isProcessing: true, error: null }));
 
 		try {
+			// First validate that it's actually JSON
 			const text = await file.text();
-			const json = JSON.parse(text);
+			const jsonData = JSON.parse(text);
+
+			const response = await fetch('http://localhost:8080/api/datascience', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ jsonData }),
+			});
+
+			if (!response.ok) {
+				throw new Error(`API error: ${response.statusText}`);
+			}
+
+			const result = await response.json();
+
 			setProcessedData({
-				machineData: json,
+				machineData: result.machineData,
 				isProcessing: false,
-				error: null
+				error: null,
+				visualizationPath: result.visualizationPath // Assuming this is the path returned from the API
 			});
 		} catch (error) {
 			setProcessedData({
 				machineData: null,
 				isProcessing: false,
-				error: 'Error processing file. Please ensure it is valid JSON.'
+				error: error instanceof Error ? error.message : 'Error processing file. Please ensure it is valid JSON.',
+				visualizationPath: null
 			});
 		}
 	};
@@ -99,11 +118,23 @@ export default function Home() {
 						)}
 					</div>
 
-					{/* Data visualization section - will be added next */}
+					{/* Data visualization section */}
 					{processedData.machineData && (
 						<div className="p-6 bg-white rounded-lg shadow">
 							<h2 className="mb-4 text-xl font-semibold text-gray-900">Data Visualization</h2>
-							<p className="text-gray-600">Visualization components will be added here</p>
+							{processedData.visualizationPath ? (
+								<div className="w-full h-64 overflow-hidden rounded-lg">
+									<img
+										src={`http://localhost:8080/${processedData.visualizationPath}`}
+										alt="Data Visualization"
+										className="w-full h-full object-contain"
+									/>
+								</div>
+							) : (
+								<div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+									<p className="text-gray-600">Processing visualization...</p>
+								</div>
+							)}
 						</div>
 					)}
 				</div>
@@ -116,16 +147,7 @@ export default function Home() {
 							<div className="p-6 bg-white rounded-lg shadow">
 								<h2 className="mb-4 text-xl font-semibold text-gray-900">Modelica Generation Status</h2>
 								<div className="space-y-4">
-									<div className="p-4 bg-gray-50 rounded">
-										<h3 className="text-sm font-medium text-gray-900">Machine Name</h3>
-										<p className="mt-1 text-sm text-gray-600">{processedData.machineData.name}</p>
-									</div>
-									<div className="p-4 bg-gray-50 rounded">
-										<h3 className="text-sm font-medium text-gray-900">Number of Fields</h3>
-										<p className="mt-1 text-sm text-gray-600">
-											{processedData.machineData.fields.length} fields detected
-										</p>
-									</div>
+									<p>{processedData.machineData}</p>
 								</div>
 							</div>
 

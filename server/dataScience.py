@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import json
 from datetime import datetime
+import matplotlib
+matplotlib.use('Agg')  # Set the backend to non-interactive before importing pyplot
 import matplotlib.pyplot as plt
+
 import seaborn as sns
 import os
 from pathlib import Path
@@ -227,7 +230,7 @@ def process_time_series(json_file_path, output_dir='generated_graphs'):
 
 def do_datascience(input_data_file_path:str):
     df, image_file_path = process_time_series(input_data_file_path)
-    return df.describe(), image_file_path
+    return str(df.describe()), image_file_path
 
 def main():
     """Example usage of the enhanced time series processor"""
