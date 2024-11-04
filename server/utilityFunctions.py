@@ -20,17 +20,17 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 load_dotenv()
 api_key_openai_name = "Personal Key"
 openai_client = OpenAI(
-    api_key="trash",
+    api_key=os.getenv("OPENAI_API_KEY"),
 )
 api_key_anthropic_name = "Personal Key"
 anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
 instructor_openai_client = instructor.from_openai(
-    OpenAI(api_key="trash")
+    OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 )
 instructor_anthropic_client = instructor.from_anthropic(
-    Anthropic(api_key=os.getenv("trash"))
+    Anthropic(api_key=os.getenv("OPENAI_API_KEY"))
 )
 
 
