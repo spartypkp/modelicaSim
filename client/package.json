@@ -3,7 +3,8 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
-    "start-flask": "cd ../server && python3 -m flask run --port=8080",
+    "setup-env": "cd .. && rm -rf .venv && python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
+    "start-flask": "cd .. && source .venv/bin/activate && cd server && python -m flask run --port=8080 --debug",
     "start-next": "next dev --turbo",
     "start": "npm-run-all --parallel start-next start-flask"
   },
